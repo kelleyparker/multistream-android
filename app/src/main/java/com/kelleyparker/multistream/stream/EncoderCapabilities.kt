@@ -17,7 +17,7 @@ object EncoderCapabilities {
       .firstOrNull { isHardware(it) }
       ?: return EncoderCaps.BASIC
     val capabilities = encoder.getCapabilitiesForType(MediaFormat.MIMETYPE_VIDEO_AVC)
-    val video = capabilities.videoCapabilities
+    val video = capabilities.videoCapabilities ?: return EncoderCaps.BASIC
     val supports1440p60 = video.areSizeAndRateSupported(2560, 1440, 60.0)
     val supports1080p60 = video.areSizeAndRateSupported(1920, 1080, 60.0)
     var dual = supports1440p60 && supports1080p60 && capabilities.maxSupportedInstances >= 2
