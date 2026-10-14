@@ -5,6 +5,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -47,6 +50,26 @@ jobs:
           name: screenshots
           path: app/build/screenshots/
           if-no-files-found: ignore
+      - name: Publish screenshots to the screenshots branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -e
+          out=$(mktemp -d)
+          cp app/build/screenshots/*.png "$out"/
+          {
+            echo "# Screenshots"
+            echo
+            echo "Rendered by CI from commit ${GITHUB_SHA}."
+            echo
+            for f in $(ls "$out" | grep '\.png$' | sort); do echo "### ${f%.png}"; echo; echo "![${f%.png}]($f)"; echo; done
+          } > "$out/README.md"
+          cd "$out"
+          git init -q -b screenshots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "Screenshots for ${GITHUB_SHA}"
+          git push -q --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" screenshots
       - name: Upload reports
         if: failure()
         uses: actions/upload-artifact@v4

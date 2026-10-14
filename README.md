@@ -83,7 +83,7 @@ app/    Android app: Jetpack Compose UI, the streaming engine, encrypted setting
 ```
 
 - **Streaming:** [RootEncoder](https://github.com/pedroSG94/RootEncoder) (Apache-2.0). [`TieredMultiStream`](app/src/main/java/com/kelleyparker/multistream/stream/TieredMultiStream.kt) drives N RTMP clients per encoder. [`TierForwarder`](app/src/main/java/com/kelleyparker/multistream/stream/TierForwarder.kt) routes RootEncoder's second encoder to the second tier.
-- **UI:** Compose + Material 3. Screens are stateless and screenshot-tested with Roborazzi (`./gradlew :app:recordRoborazziDebug`). CI uploads the screenshots as an artifact.
+- **UI:** Compose + Material 3. Screens are stateless and screenshot-tested with Roborazzi (`./gradlew :app:recordRoborazziDebug`). CI publishes every screen, in light and dark, to the [`screenshots` branch](../../tree/screenshots).
 
 ## Roadmap
 
