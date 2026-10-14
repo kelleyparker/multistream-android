@@ -12,12 +12,27 @@ android {
     applicationId = "com.kelleyparker.multistream"
     minSdk = 26
     targetSdk = 37
-    versionCode = 1
-    versionName = "0.1.0"
+    versionCode = System.getenv("VERSION_CODE")?.toIntOrNull() ?: 1
+    versionName = System.getenv("VERSION_NAME") ?: "0.1.0"
+  }
+
+  // Release signing comes from CI secrets; without them the release build is left unsigned.
+  val releaseKeystore = System.getenv("RELEASE_KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.exists() }
+  signingConfigs {
+    if (releaseKeystore != null) {
+      create("release") {
+        storeFile = releaseKeystore
+        storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+        keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+        keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+      }
+    }
   }
 
   buildTypes {
     release {
+      signingConfigs.findByName("release")?.let { signingConfig = it }
+      // R8 stays off until shrinking is checked on a real device with RootEncoder.
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
     }

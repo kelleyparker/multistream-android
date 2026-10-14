@@ -4,7 +4,7 @@ Go live on **YouTube, Twitch and Kick at the same time, straight from your phone
 
 Paid apps usually send your video to their own servers, which copy it out to each platform. This app does the copying on the phone. It encodes your camera once (or twice, see [Two encoders](#two-encoders-how-1440p-works)) and sends that stream to every platform you turn on.
 
-> **Status: v0.1, first build.** Camera + microphone streaming to YouTube, Twitch, Kick and any RTMP/RTMPS server. Tested so far against a local test server, not yet on real devices at scale. Please [file issues](../../issues).
+> **Status: v0.1, first build.** Camera + microphone streaming to YouTube, Twitch, Kick and any RTMP/RTMPS server. The code builds and passes its automated tests, but it hasn't been tried on a real phone yet. Please [file issues](../../issues).
 
 ## What it does
 
@@ -61,7 +61,12 @@ The Live screen shows the total and warns you before you go live if it's high.
 
 ## Get the app
 
-- **Download the APK:** open the repo's **Actions** tab → latest green "Android CI" run → **Artifacts → `app-debug-apk`**. Unzip it, copy `app-debug.apk` to your phone and open it. You'll need to allow installs from your browser or file manager.
+- **Download the APK:** on your phone, open the [latest release](../../releases/latest) and tap `multistream-vX.Y.Z.apk`.
+  1. Download it. If the browser warns about the file type, choose to keep it.
+  2. Open it. Android asks you to allow installs from your browser; turn that on for this one install.
+  3. Tap **Install**. Later releases install over the top and keep your saved platforms.
+
+  Releases are marked **pre-release** until the app has been tested on real phones. Try it against a [local test server](docs/TESTING.md) before going live for real.
 - **Build it yourself:** install Android Studio (or the Android SDK + JDK 17+), then run:
   ```bash
   ./gradlew assembleDebug        # → app/build/outputs/apk/debug/app-debug.apk
