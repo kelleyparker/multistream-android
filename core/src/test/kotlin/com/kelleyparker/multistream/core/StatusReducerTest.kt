@@ -52,7 +52,7 @@ class StatusReducerTest {
   fun `a server hang-up during publish gets plain words`() {
     val s = StatusReducer.reduce(emptyMap(), "kk", ConnectionEvent.Lost("Error configure stream, End of stream", willRetry = true))
     val status = s["kk"] as DestinationStatus.Reconnecting
-    assertEquals("The server closed the connection. Check the stream key and server URL.", status.reason)
+    assertEquals("The server closed the connection. If it keeps happening, check the stream key and server URL.", status.reason)
     assertNull(status.detail)
   }
 

@@ -58,7 +58,7 @@ object StatusReducer {
     val lower = reason.lowercase()
     return when {
       // The server hung up mid-handshake, which is how Kick/AWS IVS answers a bad key or address.
-      "end of stream" in lower -> "The server closed the connection. Check the stream key and server URL."
+      "end of stream" in lower -> "The server closed the connection. If it keeps happening, check the stream key and server URL."
       "unknownhost" in lower || "unable to resolve" in lower -> "Can't find the server. Check the address and your internet."
       "refused" in lower -> "The server refused the connection. Check the address and port."
       "timeout" in lower || "timed out" in lower -> "The server didn't answer in time."
