@@ -27,9 +27,10 @@ class BitrateDialTest {
   @Test
   fun `zones follow the recommendation`() {
     val dial = BitrateDial.forMembers(listOf(PlatformLimits.YOUTUBE), VideoFormat(Resolution.P1440, FrameRate.FPS60))
-    assertEquals(24_000, dial.recommendedKbps)
+    assertEquals(34_000, dial.recommendedKbps)
+    assertEquals(8_000, dial.minKbps)
     assertEquals(DialZone.LOW, dial.zone(12_000))
-    assertEquals(DialZone.GOOD, dial.zone(24_000))
+    assertEquals(DialZone.GOOD, dial.zone(34_000))
   }
 
   @Test

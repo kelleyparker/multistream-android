@@ -30,7 +30,7 @@ class SettingsValidatorTest {
     val tier = Tier(TierId.HIGH, VideoFormat(Resolution.P1440, FrameRate.FPS60), 10_000, listOf(youtube))
     val result = SettingsValidator.validate(planOf(tier), EncoderCaps.FLAGSHIP)
     assertTrue(result.canGoLive)
-    assertTrue(result.warnings.any { "recommends 24000 kbps" in it.message })
+    assertTrue(result.warnings.any { "recommends 34000 kbps" in it.message })
   }
 
   @Test
@@ -102,5 +102,29 @@ class SettingsValidatorTest {
     val settings = QualitySettings(QualityPreset.CUSTOM, CustomQuality(youtubeOwnTier = false), AudioBitrate.K160)
     assertEquals(settings, QualityJson.decode(QualityJson.encode(settings)))
     assertEquals(QualitySettings(), QualityJson.decode("{broken"))
+  }
+
+  @Test
+  fun `youtube enforces its per-format H264 minimum`() {
+    val tier = Tier(TierId.HIGH, VideoFormat(Resolution.P1080, FrameRate.FPS30), 4_500, listOf(youtube))
+    val result = SettingsValidator.validate(planOf(tier), EncoderCaps.FLAGSHIP)
+    assertTrue(result.errors.any { it.message == "YouTube needs at least 5000 kbps for 1080p30." })
+  }
+
+  @Test
+  fun `every preset passes every platform's rules`() {
+    for (preset in listOf(QualityPreset.TEST, QualityPreset.STANDARD, QualityPreset.MAX)) {
+      for (caps in listOf(EncoderCaps.FLAGSHIP, EncoderCaps.BASIC)) {
+        val plan = TierPlanner.plan(listOf(youtube, twitch, kick), quality(preset), caps)
+        val result = SettingsValidator.validate(plan, caps)
+        assertTrue("$preset on $caps: ${result.errors}", result.canGoLive)
+      }
+    }
+  }
+
+  @Test
+  fun `kick anywhere in the plan means main profile`() {
+    assertTrue(TierPlanner.plan(listOf(youtube, kick), quality(QualityPreset.MAX), EncoderCaps.FLAGSHIP).useMainProfile)
+    assertFalse(TierPlanner.plan(listOf(youtube, twitch), quality(QualityPreset.MAX), EncoderCaps.FLAGSHIP).useMainProfile)
   }
 }

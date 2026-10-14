@@ -1,7 +1,7 @@
 plugins {
-  alias(libs.plugins.android.application)
-  alias(libs.plugins.kotlin.compose)
-  alias(libs.plugins.roborazzi)
+  id("com.android.application")
+  id("org.jetbrains.kotlin.plugin.compose")
+  id("io.github.takahirom.roborazzi")
 }
 
 android {

@@ -92,7 +92,7 @@ fun QualityScreen(state: UiState, onBack: () -> Unit, onChange: (QualitySettings
         if (quality.preset == QualityPreset.CUSTOM) CustomPanel(state, enabled, onChange)
         Section(
           "Audio",
-          help = "Shared by every platform: AAC stereo at 48 kHz. 128 kbps is right for voice and most music.",
+          help = "Shared by every platform: AAC stereo at 44.1 kHz. 128 kbps is what YouTube recommends and suits voice and most music.",
         ) {
           ChipPicker(
             options = AudioBitrate.entries,

@@ -40,7 +40,7 @@ data class BitrateDial(
     /** Builds the dial for one tier's member platforms at a given format. */
     fun forMembers(members: List<PlatformLimits>, format: VideoFormat): BitrateDial {
       val effective = members.ifEmpty { listOf(PlatformLimits.CUSTOM) }
-      val min = effective.maxOf { it.minVideoKbps }
+      val min = effective.maxOf { it.minFor(format) }
       val max = effective.minOf { it.maxVideoKbps }
       // Recommended = the highest recommendation that still fits, so green means "what platforms ask for".
       val recommended = effective.mapNotNull { it.recommendedFor(format) }.maxOrNull()?.coerceAtMost(max)

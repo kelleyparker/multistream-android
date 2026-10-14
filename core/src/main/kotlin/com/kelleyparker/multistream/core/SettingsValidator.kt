@@ -75,8 +75,8 @@ object SettingsValidator {
     OptionRules.frameRateReason(tier.format.frameRate, listOf(limits))?.let(::error)
     if (tier.videoKbps > limits.maxVideoKbps) {
       error("${limits.platform.displayName} allows up to ${limits.maxVideoKbps} kbps.")
-    } else if (tier.videoKbps < limits.minVideoKbps) {
-      error("${limits.platform.displayName} needs at least ${limits.minVideoKbps} kbps.")
+    } else if (tier.videoKbps < limits.minFor(tier.format)) {
+      error("${limits.platform.displayName} needs at least ${limits.minFor(tier.format)} kbps for ${tier.format.label}.")
     } else {
       val recommended = limits.recommendedFor(tier.format)
       if (recommended != null && tier.videoKbps < recommended) {

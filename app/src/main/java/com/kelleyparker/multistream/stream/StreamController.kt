@@ -87,8 +87,11 @@ class StreamController(private val context: Context) {
         (second?.videoKbps ?: 0) * 1000, profile,
       )
     }.getOrElse { Log.w(TAG, "prepareVideo failed", it); false }
-    // High profile looks better per bit; fall back to the encoder's default if the phone refuses it.
-    val videoReady = prepareWith(MediaCodecInfo.CodecProfileLevel.AVCProfileHigh) || prepareWith(-1)
+    // Kick asks for Main profile; otherwise High looks better per bit. Both tiers share the setting.
+    // Fall back to the encoder's default if the phone refuses it.
+    val profile = if (newPlan.useMainProfile) MediaCodecInfo.CodecProfileLevel.AVCProfileMain else MediaCodecInfo.CodecProfileLevel.AVCProfileHigh
+    created.forceBt709Color(true) // Rec. 709, as YouTube recommends for SDR
+    val videoReady = prepareWith(profile) || prepareWith(-1)
     val audioReady = runCatching {
       created.prepareAudio(AUDIO_SAMPLE_RATE, true, newPlan.audio.kbps * 1000, echoCanceler = false, noiseSuppressor = true)
     }.getOrDefault(false)

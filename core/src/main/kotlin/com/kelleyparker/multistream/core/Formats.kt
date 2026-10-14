@@ -23,7 +23,10 @@ data class VideoFormat(val resolution: Resolution, val frameRate: FrameRate) {
   val label: String get() = "${resolution.label}${frameRate.fps}"
 }
 
-/** Audio is shared by every destination: AAC-LC, stereo, 48 kHz. Only the bitrate is a choice. */
+/**
+ * Audio is shared by every destination: AAC-LC stereo at 44.1 kHz, which YouTube recommends for
+ * stereo and Twitch and Kick (≤ 48 kHz) accept. Only the bitrate is a choice.
+ */
 @Serializable
 enum class AudioBitrate(val kbps: Int) {
   K96(96),
@@ -33,5 +36,5 @@ enum class AudioBitrate(val kbps: Int) {
   val label: String get() = "$kbps kbps"
 }
 
-const val AUDIO_SAMPLE_RATE = 48_000
+const val AUDIO_SAMPLE_RATE = 44_100
 const val KEYFRAME_INTERVAL_SECONDS = 2

@@ -53,6 +53,9 @@ data class TierPlan(
   /** Total upload in kbps: every destination receives its tier's video plus the shared audio. */
   val uploadKbps: Int get() = tiers.sumOf { (it.videoKbps + audio.kbps) * it.destinations.size }
 
+  /** Kick asks for Main profile; both encoders share one profile setting, so Kick anywhere means Main. */
+  val useMainProfile: Boolean get() = tiers.any { tier -> tier.destinations.any { it.platform.limits.mainProfileOnly } }
+
   val encodeTier: Tier? get() = tiers.firstOrNull { it.id == TierId.HIGH } ?: tiers.firstOrNull()
 
   companion object {
@@ -69,6 +72,7 @@ data class TierPlan(
  * is the lowest maximum among its members.
  */
 object TierPlanner {
+  private val YOUTUBE_1080P60_KBPS = PlatformLimits.YOUTUBE.recommendedFor(VideoFormat(Resolution.P1080, FrameRate.FPS60))!!
 
   fun plan(destinations: List<Destination>, quality: QualitySettings, caps: EncoderCaps): TierPlan {
     val enabled = destinations.filter { it.enabled }
@@ -112,7 +116,7 @@ object TierPlanner {
         return single(enabled, TierSettings(PlatformLimits.YOUTUBE.maxPreset, PlatformLimits.YOUTUBE.maxPresetKbps), audio)
       }
       notes += PlanNote(NoteKind.INFO, "This phone can't encode 1440p60, so YouTube gets 1080p60.")
-      return single(enabled, TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS60), 12_000), audio, notes)
+      return single(enabled, TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS60), YOUTUBE_1080P60_KBPS), audio, notes)
     }
 
     return single(enabled, sharedMax(enabled, notes), audio, notes)
@@ -121,8 +125,8 @@ object TierPlanner {
   /** 1080p60 at the lowest Max-preset bitrate among the platforms sharing one encoder. */
   private fun sharedMax(destinations: List<Destination>, notes: MutableList<PlanNote>): TierSettings {
     val targets = destinations.map { it.platform }.distinct().associateWith { platform ->
-      // YouTube's own 1080p60 recommendation; its 24 000 kbps Max target is for 1440p only.
-      if (platform == Platform.YOUTUBE) 12_000 else platform.limits.maxPresetKbps
+      // YouTube's own 1080p60 recommendation; its 34 000 kbps Max target is for 1440p only.
+      if (platform == Platform.YOUTUBE) YOUTUBE_1080P60_KBPS else platform.limits.maxPresetKbps
     }
     val kbps = targets.values.min()
     val setters = targets.filterValues { it == kbps }.keys.joinToString(" and ") { it.displayName }

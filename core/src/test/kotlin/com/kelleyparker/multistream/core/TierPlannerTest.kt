@@ -17,7 +17,7 @@ class TierPlannerTest {
     val main = plan.tiers.single { it.id == TierId.MAIN }
     assertEquals(listOf(youtube), high.destinations)
     assertEquals(p1440p60, high.format)
-    assertEquals(24_000, high.videoKbps)
+    assertEquals(34_000, high.videoKbps)
     assertEquals(listOf(twitch, kick), main.destinations)
     assertEquals(p1080p60, main.format)
     assertEquals(6_000, main.videoKbps)
@@ -50,7 +50,7 @@ class TierPlannerTest {
     val plan = TierPlanner.plan(listOf(youtube), quality(QualityPreset.MAX), EncoderCaps.FLAGSHIP)
     assertEquals(1, plan.tiers.size)
     assertEquals(p1440p60, plan.tiers[0].format)
-    assertEquals(24_000, plan.tiers[0].videoKbps)
+    assertEquals(34_000, plan.tiers[0].videoKbps)
   }
 
   @Test
@@ -72,9 +72,9 @@ class TierPlannerTest {
   @Test
   fun `upload estimate counts every destination`() {
     val plan = TierPlanner.plan(listOf(youtube, twitch, kick), quality(QualityPreset.MAX), EncoderCaps.FLAGSHIP)
-    // YouTube 24000 + 128, Twitch and Kick 6000 + 128 each.
-    assertEquals(24_128 + 2 * 6_128, plan.uploadKbps)
-    assertEquals("36.4 Mbps", formatMbps(plan.uploadKbps))
+    // YouTube 34000 + 128, Twitch and Kick 6000 + 128 each.
+    assertEquals(34_128 + 2 * 6_128, plan.uploadKbps)
+    assertEquals("46.4 Mbps", formatMbps(plan.uploadKbps))
   }
 
   @Test

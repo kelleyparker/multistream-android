@@ -22,7 +22,7 @@ data class TierSettings(val format: VideoFormat, val videoKbps: Int)
 data class CustomQuality(
   val main: TierSettings = TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS60), 6_000),
   val youtubeOwnTier: Boolean = true,
-  val youtube: TierSettings = TierSettings(VideoFormat(Resolution.P1440, FrameRate.FPS60), 24_000),
+  val youtube: TierSettings = TierSettings(VideoFormat(Resolution.P1440, FrameRate.FPS60), 34_000),
 )
 
 @Serializable
@@ -34,7 +34,8 @@ data class QualitySettings(
 
 object PresetFormats {
   val TEST = TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS60), 6_000)
-  val STANDARD = TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS30), 4_500)
+  // 5000, not Twitch's 4500, because YouTube's H.264 minimum for 1080p30 is 5 Mbps.
+  val STANDARD = TierSettings(VideoFormat(Resolution.P1080, FrameRate.FPS30), 5_000)
 }
 
 object QualityJson {

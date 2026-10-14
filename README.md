@@ -19,15 +19,18 @@ Paid apps usually send your video to their own servers, which copy it out to eac
 
 | Platform | Max the app sends | Video | Keyframe | Audio | Server |
 |---|---|---|---|---|---|
-| **YouTube** | 2560×1440 @ 60 | H.264, 24 000 kbps (YouTube's recommendation for 1440p60) | 2 s | AAC 128 kbps | RTMPS (recommended) or RTMP, picked from a list |
-| **Twitch** | 1920×1080 @ 60 | H.264 CBR, up to 6000 kbps | 2 s | AAC ≤ 160 kbps | Auto ingest (RTMP or RTMPS), picked from a list |
-| **Kick** | 1920×1080 @ 60 | H.264 CBR only, 1000–8000 kbps | 2 s | AAC stereo ≤ 48 kHz | **RTMPS only**; URL is per account, pasted from the Kick dashboard |
+| **YouTube** | 2560×1440 @ 60 | H.264 CBR, **34 000 kbps** (YouTube's H.264 recommendation for 1440p60; minimum 8000) | 2 s (≤ 4) | AAC 128 kbps stereo, 44.1 kHz | RTMPS (recommended) or RTMP, picked from a list |
+| **Twitch** | 1920×1080 @ 60 | H.264 CBR, up to 6000 kbps, Main/High profile | 2 s | AAC ≤ 160 kbps | Auto ingest (RTMP or RTMPS), picked from a list; 48-hour max broadcast |
+| **Kick** | 1920×1080 @ 60 | H.264 CBR only, 1000–8000 kbps, **Main profile**, no B-frames | 2 s | AAC stereo ≤ 48 kHz | **RTMPS only**; URL is per account, pasted from the Kick dashboard |
 | Custom | up to 1440p60 | anything 500–50 000 kbps | 2 s | AAC | any `rtmp://` or `rtmps://` |
 
 All limits live in one file, [`core/.../Platform.kt`](core/src/main/kotlin/com/kelleyparker/multistream/core/Platform.kt), so they're easy to update when platforms change their rules. Sources:
 - YouTube: [live encoder settings](https://support.google.com/youtube/answer/2853702)
 - Twitch: [2K streaming announcement](https://blog.twitch.tv/en/2026/06/17/introducing-dual-format-and-2k-streaming-on-twitch/)
+- Twitch: [broadcasting guidelines](https://help.twitch.tv/s/article/broadcasting-guidelines)
 - Kick: [help center](https://help.kick.com/en/articles/7066931-how-to-stream-on-kick-com)
+
+Standard uses 5000 kbps rather than Twitch's 4500 because YouTube's H.264 minimum for 1080p30 is 5 Mbps. Every encoder runs CBR with a 2-second keyframe interval and BT.709 colour. When Kick is on, both encoders use H.264 Main profile (Kick's guide); otherwise High.
 
 Twitch's 1440p and 7500 kbps 1080p only work through Twitch's *Enhanced Broadcasting* protocol, which is on the [roadmap](#roadmap). Plain RTMP to Twitch tops out at 6000 kbps.
 
@@ -36,22 +39,22 @@ Twitch's 1440p and 7500 kbps 1080p only work through Twitch's *Enhanced Broadcas
 | Preset | YouTube | Twitch | Kick |
 |---|---|---|---|
 | **Test** | 1080p60 · 6000 | 1080p60 · 6000 | 1080p60 · 6000 |
-| **Standard** | 1080p30 · 4500 | 1080p30 · 4500 | 1080p30 · 4500 |
-| **Max** | **1440p60 · 24 000** | 1080p60 · 6000 | 1080p60 · 6000 (8000 when Twitch is off) |
+| **Standard** | 1080p30 · 5000 | 1080p30 · 5000 | 1080p30 · 5000 |
+| **Max** | **1440p60 · 34 000** | 1080p60 · 6000 | 1080p60 · 6000 (8000 when Twitch is off) |
 | **Custom** | your choice | your choice | your choice |
 
 ## Two encoders: how 1440p works
 
 One encoder makes one stream, and every destination on it gets exactly the same video. Kick and Twitch can't take 1440p, so with **Max** the app runs **two hardware encoders from the same camera**:
 
-- **High encoder:** YouTube at 1440p60, 24 000 kbps
+- **High encoder:** YouTube at 1440p60, 34 000 kbps
 - **Main encoder:** Twitch, Kick and custom servers at 1080p60. Its bitrate is the lowest maximum among them: 6000 when Twitch is on, 8000 for Kick alone.
 
 The app asks the phone's encoder whether it can handle both before offering this. Most recent flagship phones can. On phones that can't, Max falls back to 1080p60 for everyone, and the Quality screen says so.
 
 **Upload bandwidth adds up.** Every platform gets its own copy:
 
-- YouTube 1440p + Twitch + Kick ≈ 24 + 6 + 6 ≈ **36 Mbps upload**.
+- YouTube 1440p + Twitch + Kick ≈ 34 + 6 + 6 ≈ **46 Mbps upload**.
 - Three 1080p60 streams at 6000 ≈ **18.4 Mbps**.
 
 The Live screen shows the total and warns you before you go live if it's high.

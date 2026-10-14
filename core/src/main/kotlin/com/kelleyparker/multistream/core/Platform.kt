@@ -23,11 +23,15 @@ data class PlatformLimits(
   val maxFrameRate: FrameRate,
   val minVideoKbps: Int,
   val maxVideoKbps: Int,
+  /** Per-format minimums where the platform publishes them (YouTube does); otherwise [minVideoKbps]. */
+  val minKbpsByFormat: Map<VideoFormat, Int> = emptyMap(),
   /** Bitrate the platform recommends per format; going lower is allowed but warned about. */
   val recommendedKbps: Map<VideoFormat, Int>,
   val maxAudio: AudioBitrate,
   val requiresRtmps: Boolean,
   val prefersRtmps: Boolean,
+  /** Kick's guide asks for H.264 Main profile; the others accept Main or High. */
+  val mainProfileOnly: Boolean = false,
   /** What the Max preset sends to this platform. */
   val maxPreset: VideoFormat,
   val maxPresetKbps: Int,
@@ -44,6 +48,8 @@ data class PlatformLimits(
 
   fun recommendedFor(format: VideoFormat): Int? = recommendedKbps[format]
 
+  fun minFor(format: VideoFormat): Int = minKbpsByFormat[format] ?: minVideoKbps
+
   companion object {
     private fun table(vararg entries: Pair<String, Int>): Map<VideoFormat, Int> =
       entries.associate { (key, kbps) ->
@@ -52,22 +58,28 @@ data class PlatformLimits(
         VideoFormat(resolution, frameRate) to kbps
       }
 
+    // YouTube Help, "Choose live encoder settings": the H.264 columns (H.265/AV1 need less).
     val YOUTUBE = PlatformLimits(
       platform = Platform.YOUTUBE,
       maxResolution = Resolution.P1440,
       maxFrameRate = FrameRate.FPS60,
-      minVideoKbps = 1_500,
-      maxVideoKbps = 30_000,
+      minVideoKbps = 3_000,
+      maxVideoKbps = 50_000,
+      minKbpsByFormat = table(
+        "720p30" to 3_000, "720p60" to 3_000,
+        "1080p30" to 5_000, "1080p60" to 6_000,
+        "1440p30" to 7_000, "1440p60" to 8_000,
+      ),
       recommendedKbps = table(
-        "720p30" to 4_000, "720p60" to 6_000,
-        "1080p30" to 10_000, "1080p60" to 12_000,
-        "1440p30" to 15_000, "1440p60" to 24_000,
+        "720p30" to 8_000, "720p60" to 8_000,
+        "1080p30" to 14_000, "1080p60" to 17_000,
+        "1440p30" to 21_000, "1440p60" to 34_000,
       ),
       maxAudio = AudioBitrate.K160,
       requiresRtmps = false,
       prefersRtmps = true,
       maxPreset = VideoFormat(Resolution.P1440, FrameRate.FPS60),
-      maxPresetKbps = 24_000,
+      maxPresetKbps = 34_000,
       ingestOptions = listOf(
         IngestOption("Auto, encrypted (RTMPS)", "rtmps://a.rtmps.youtube.com:443/live2", recommended = true),
         IngestOption("Auto, unencrypted (RTMP)", "rtmp://a.rtmp.youtube.com/live2"),
@@ -76,6 +88,7 @@ data class PlatformLimits(
       keyHelpText = "YouTube Studio → Create → Go live → Stream. Copy the \"Stream key\".",
     )
 
+    // Twitch Help, "Broadcasting Guidelines": CBR, 2 s keyframes, Main/High profile.
     val TWITCH = PlatformLimits(
       platform = Platform.TWITCH,
       maxResolution = Resolution.P1080,
@@ -99,6 +112,7 @@ data class PlatformLimits(
       keyHelpText = "Twitch Creator Dashboard → Settings → Stream. Copy the \"Primary Stream key\".",
     )
 
+    // Kick Help, OBS settings: H.264 CBR 1000–8000 kbps, 2 s keyframes, Main profile, no B-frames.
     val KICK = PlatformLimits(
       platform = Platform.KICK,
       maxResolution = Resolution.P1080,
@@ -112,6 +126,7 @@ data class PlatformLimits(
       maxAudio = AudioBitrate.K160,
       requiresRtmps = true,
       prefersRtmps = true,
+      mainProfileOnly = true,
       maxPreset = VideoFormat(Resolution.P1080, FrameRate.FPS60),
       maxPresetKbps = 8_000,
       // Kick gives every account its own server URL, so there is nothing to pick from.
