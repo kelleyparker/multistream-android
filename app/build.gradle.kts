@@ -36,6 +36,10 @@ android {
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
     }
+    debug {
+      // Installs next to the release app, so testing never wipes its saved stream keys.
+      applicationIdSuffix = ".debug"
+    }
   }
 
   compileOptions {
