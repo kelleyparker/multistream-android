@@ -32,7 +32,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Renders every main screen in light and dark so the UI can be reviewed without a phone.
- * Run `./gradlew :app:recordRoborazziDebug`; images land in app/build/screenshots/.
+ * Run `./gradlew :app:recordRoborazziDebug`; images land in app/build/outputs/roborazzi/.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -57,7 +57,7 @@ class ScreenshotTest {
 
   private fun shoot(name: String, content: @Composable () -> Unit) {
     for (dark in listOf(false, true)) {
-      captureRoboImage("build/screenshots/${name}_${if (dark) "dark" else "light"}.png") {
+      captureRoboImage("build/outputs/roborazzi/${name}_${if (dark) "dark" else "light"}.png") {
         MultistreamTheme(darkTheme = dark) { content() }
       }
     }
