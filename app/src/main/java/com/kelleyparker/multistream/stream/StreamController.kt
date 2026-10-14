@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import android.media.MediaCodecInfo
 import android.os.Handler
 import android.os.Looper
+import android.util.Size
 import android.util.Log
 import android.view.SurfaceView
 import com.kelleyparker.multistream.core.AUDIO_SAMPLE_RATE
@@ -14,11 +15,13 @@ import com.kelleyparker.multistream.core.KEYFRAME_INTERVAL_SECONDS
 import com.kelleyparker.multistream.core.StatusReducer
 import com.kelleyparker.multistream.core.TierId
 import com.kelleyparker.multistream.core.TierPlan
+import com.kelleyparker.multistream.core.pickCaptureMode
 import com.pedro.common.ConnectChecker
 import com.pedro.encoder.input.gl.render.filters.`object`.ImageFilterRender
 import com.pedro.encoder.input.sources.OrientationForced
 import com.pedro.encoder.input.sources.audio.MicrophoneSource
 import com.pedro.encoder.input.sources.video.Camera2Source
+import com.pedro.encoder.input.video.CameraOpenException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,6 +54,8 @@ class StreamController(private val context: Context) {
   private val wantsLive = mutableSetOf<String>()
   private var previewView: SurfaceView? = null
   private var overlay: ImageFilterRender? = null
+  @Volatile private var cameraFrames = 0L
+  private var cameraFps = 30
 
   /** Rebuilds the encoders for [newPlan]. Ignored while live; returns false if the phone refused the settings. */
   fun configure(newPlan: TierPlan): Boolean {
@@ -72,21 +77,28 @@ class StreamController(private val context: Context) {
       high.destinations.forEachIndexed { i, d -> put(d.id, TierId.HIGH to i) }
       second?.destinations?.forEachIndexed { i, d -> put(d.id, TierId.MAIN to i) }
     }
+    val fps = high.format.frameRate.fps
+    val camera = Camera2Source(context)
+    camera.setCustomOnCaptureCompletedCallback { _, _, _ -> cameraFrames++ }
+    cameraFps = fps
+    captureSizeFor(high.format.resolution.width, high.format.resolution.height, fps)?.let { size ->
+      runCatching { camera.setRequiredResolution(size) }.onFailure { Log.w(TAG, "camera size $size refused", it) }
+    }
     val created = TieredMultiStream(
       context,
       high.destinations.map { checkerFor(it.id) },
       second?.destinations?.map { checkerFor(it.id) }.orEmpty(),
-      Camera2Source(context),
+      camera,
       MicrophoneSource(),
     )
-    val fps = high.format.frameRate.fps
+    var prepareError: Throwable? = null
     fun prepareWith(profile: Int) = runCatching {
       created.prepare(
         high.format.resolution.width, high.format.resolution.height, high.videoKbps * 1000, fps, KEYFRAME_INTERVAL_SECONDS,
         second?.format?.resolution?.width ?: 0, second?.format?.resolution?.height ?: 0,
         (second?.videoKbps ?: 0) * 1000, profile,
       )
-    }.getOrElse { Log.w(TAG, "prepareVideo failed", it); false }
+    }.getOrElse { Log.w(TAG, "prepareVideo failed", it); prepareError = it; false }
     // Kick asks for Main profile; otherwise High looks better per bit. Both tiers share the setting.
     // Fall back to the encoder's default if the phone refuses it.
     val profile = if (newPlan.useMainProfile) MediaCodecInfo.CodecProfileLevel.AVCProfileMain else MediaCodecInfo.CodecProfileLevel.AVCProfileHigh
@@ -96,7 +108,9 @@ class StreamController(private val context: Context) {
       created.prepareAudio(AUDIO_SAMPLE_RATE, true, newPlan.audio.kbps * 1000, echoCanceler = false, noiseSuppressor = true)
     }.getOrDefault(false)
     if (!videoReady || !audioReady) {
-      _error.value = if (!videoReady) {
+      _error.value = if (prepareError is CameraOpenException) {
+        "The camera isn't available right now. Close other camera apps, then reopen Multistream."
+      } else if (!videoReady) {
         "This phone couldn't start the video encoder with these settings. Try the Standard preset."
       } else {
         "The microphone couldn't start. Check that no other app is using it."
@@ -126,7 +140,27 @@ class StreamController(private val context: Context) {
 
   private fun startPreview(view: SurfaceView) {
     val s = stream ?: return
-    if (!s.isOnPreview) runCatching { s.startPreview(view, autoHandle = true) }.onFailure { Log.w(TAG, "preview failed", it) }
+    if (s.isOnPreview) return
+    runCatching { s.startPreview(view, autoHandle = true) }.onFailure { Log.w(TAG, "preview failed", it) }
+    watchCameraFrames(s)
+  }
+
+  /**
+   * Some phones accept a camera setting and then never deliver a frame (the Nothing Phone (4a) Pro
+   * at 60 fps). Streams would then go out with audio only while showing Live, so say so and block
+   * Go Live instead.
+   */
+  private fun watchCameraFrames(s: TieredMultiStream) {
+    val before = cameraFrames
+    main.postDelayed({
+      if (stream !== s || !s.isOnPreview || cameraFrames != before) return@postDelayed
+      Log.w(TAG, "camera sent no frames at $cameraFps fps")
+      _error.value = if (cameraFps > 30) {
+        "This phone's camera isn't sending video at $cameraFps fps. Pick a 30 fps preset."
+      } else {
+        "The camera isn't sending video. Close other camera apps, then reopen Multistream."
+      }
+    }, CAMERA_WATCHDOG_MS)
   }
 
   fun goLive() {
@@ -249,9 +283,17 @@ class StreamController(private val context: Context) {
     endpoints.values.fold(reason) { text, url -> text.replace(url, "<endpoint>") }
       .replace(Regex("""(sk_|live_)[A-Za-z0-9_\-]+"""), "$1<redacted>")
 
+  /** A camera size that keeps up with [fps] when RootEncoder's own pick can't; null keeps its pick. */
+  private fun captureSizeFor(width: Int, height: Int, fps: Int): Size? {
+    val mode = pickCaptureMode(CameraModesProbe.back(context), width, height, fps) ?: return null
+    Log.i(TAG, "capturing ${mode.width}x${mode.height} for a ${width}x$height@$fps stream")
+    return Size(mode.width, mode.height)
+  }
+
   private companion object {
     const val TAG = "StreamController"
     const val MAX_RETRIES = 10
+    const val CAMERA_WATCHDOG_MS = 4_000L
     const val RETRY_BASE_MS = 2_000L
     const val RETRY_MAX_MS = 30_000L
   }
