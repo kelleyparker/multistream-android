@@ -219,7 +219,7 @@ private fun ControlPanel(
         Icon(Icons.Filled.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
         val measured = state.statuses.values.filterIsInstance<DestinationStatus.Live>().sumOf { it.bitrateKbps }
         Text(
-          if (state.isLive && measured > 0) " Sending ${formatMbps(measured)} of ~${formatMbps(state.plan.uploadKbps)}"
+          if (state.isLive && measured > 0) " Sending ${formatMbps(measured).removeSuffix(" Mbps")} of ~${formatMbps(state.plan.uploadKbps)}"
           else " Needs ~${formatMbps(state.plan.uploadKbps)} upload",
           style = MaterialTheme.typography.labelLarge,
           modifier = Modifier.weight(1f),

@@ -90,6 +90,7 @@ class ScreenshotTest {
   }
 
   @Test
+  @Config(qualifiers = "w411dp-h1700dp-xxhdpi")
   fun qualityCustomDial() = shoot("04_quality_custom") {
     QualityScreen(ready.copy(quality = QualitySettings(QualityPreset.CUSTOM, CustomQuality())), onBack = {}, onChange = {})
   }

@@ -92,7 +92,14 @@ fun PlatformsScreen(
         DestinationRow(
           destination = destination,
           subtitle = destination.missingSetup()
-            ?: tier?.let { "${it.format.label} · ${it.videoKbps} kbps" + if (state.plan.isDualTier) " · ${it.id.label} encoder" else "" }
+            ?: tier?.let { t ->
+              val others = t.destinations.filter { it.id != destination.id }.map { it.label }.distinct()
+              "${t.format.label} · ${t.videoKbps} kbps" + when {
+                !state.plan.isDualTier -> ""
+                others.isEmpty() -> "\nOwn encoder"
+                else -> "\nShares an encoder with ${others.joinToString(", ")}"
+              }
+            }
             ?: "Off",
           enabled = !state.isLive,
           onToggle = { onToggle(destination.id, it) },

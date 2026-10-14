@@ -112,7 +112,7 @@ fun QualityScreen(state: UiState, onBack: () -> Unit, onChange: (QualitySettings
 @Composable
 private fun PresetCard(state: UiState, preset: QualityPreset, selected: Boolean, enabled: Boolean, onSelect: () -> Unit) {
   val plan = TierPlanner.plan(state.destinations, state.quality.copy(preset = preset), state.caps)
-  val perPlatform = plan.tiers.flatMap { tier -> tier.destinations.map { "${it.platform.displayName} ${tier.format.label}" } }.distinct()
+  val perPlatform = plan.tiers.flatMap { tier -> tier.destinations.map { "${it.platform.displayName}\u00A0${tier.format.label}" } }.distinct()
   Card(
     modifier = Modifier
       .fillMaxWidth()
