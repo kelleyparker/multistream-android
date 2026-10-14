@@ -208,6 +208,7 @@ class StreamController(private val context: Context) {
     override fun onConnectionSuccess() = report(id, ConnectionEvent.Connected)
 
     override fun onConnectionFailed(reason: String) {
+      Log.w(TAG, "destination $id connection failed: ${redactKeys(reason)}")
       main.post {
         val s = stream ?: return@post
         val slot = slots[id] ?: return@post
@@ -225,6 +226,7 @@ class StreamController(private val context: Context) {
     override fun onDisconnect() = Unit
 
     override fun onAuthError() {
+      Log.w(TAG, "destination $id auth error")
       main.post {
         val s = stream ?: return@post
         report(id, ConnectionEvent.AuthFailed)
@@ -241,6 +243,11 @@ class StreamController(private val context: Context) {
     if (wantsLive.remove(id)) s.stopClient(slot.first, slot.second)
     if (wantsLive.isEmpty()) _isLive.value = false
   }
+
+  /** Reasons can echo the publish URL; never let a stream key reach the log. */
+  private fun redactKeys(reason: String): String =
+    endpoints.values.fold(reason) { text, url -> text.replace(url, "<endpoint>") }
+      .replace(Regex("""(sk_|live_)[A-Za-z0-9_\-]+"""), "$1<redacted>")
 
   private companion object {
     const val TAG = "StreamController"

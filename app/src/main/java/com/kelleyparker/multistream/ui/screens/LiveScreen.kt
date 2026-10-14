@@ -290,6 +290,10 @@ private fun DestinationCard(state: UiState, destination: Destination, actions: L
         StatusLight(status)
         if (status is DestinationStatus.Failed) Caption(status.reason, color = LocalStatusColors.current.failed)
         if (status is DestinationStatus.Reconnecting) Caption(status.reason)
+        val detail = (status as? DestinationStatus.Failed)?.detail ?: (status as? DestinationStatus.Reconnecting)?.detail
+        if (detail != null) {
+          Text("Details: $detail", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+        }
       }
       when {
         status is DestinationStatus.Failed || (state.isLive && status == DestinationStatus.Idle) ->

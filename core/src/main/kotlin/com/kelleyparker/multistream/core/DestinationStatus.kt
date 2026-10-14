@@ -4,8 +4,9 @@ sealed interface DestinationStatus {
   data object Idle : DestinationStatus
   data object Connecting : DestinationStatus
   data class Live(val bitrateKbps: Int = 0) : DestinationStatus
-  data class Reconnecting(val attempt: Int, val reason: String) : DestinationStatus
-  data class Failed(val reason: String) : DestinationStatus
+  /** [detail] is the raw error when [reason] couldn't put it in plain words. */
+  data class Reconnecting(val attempt: Int, val reason: String, val detail: String? = null) : DestinationStatus
+  data class Failed(val reason: String, val detail: String? = null) : DestinationStatus
 }
 
 /** Events reported by one destination's RTMP connection. */
@@ -37,9 +38,9 @@ object StatusReducer {
       is ConnectionEvent.Lost ->
         if (event.willRetry) {
           val attempt = (current as? DestinationStatus.Reconnecting)?.attempt?.plus(1) ?: 1
-          DestinationStatus.Reconnecting(attempt, friendlyReason(event.reason))
+          DestinationStatus.Reconnecting(attempt, friendlyReason(event.reason), rawDetail(event.reason))
         } else {
-          DestinationStatus.Failed(friendlyReason(event.reason))
+          DestinationStatus.Failed(friendlyReason(event.reason), rawDetail(event.reason))
         }
       ConnectionEvent.AuthFailed -> DestinationStatus.Failed("The stream key was rejected. Re-paste it from your dashboard.")
       ConnectionEvent.Stopped -> DestinationStatus.Idle
@@ -48,17 +49,23 @@ object StatusReducer {
   }
 
   /** Turns low-level socket errors into something a streamer can act on. */
-  fun friendlyReason(reason: String): String {
+  fun friendlyReason(reason: String): String = knownReason(reason) ?: "Connection failed."
+
+  /** The raw error, kept for the card's details line when [friendlyReason] doesn't recognise it. */
+  fun rawDetail(reason: String): String? = reason.trim().takeIf { it.isNotEmpty() && knownReason(reason) == null }
+
+  private fun knownReason(reason: String): String? {
     val lower = reason.lowercase()
     return when {
+      // The server hung up mid-handshake, which is how Kick/AWS IVS answers a bad key or address.
+      "end of stream" in lower -> "The server closed the connection. Check the stream key and server URL."
       "unknownhost" in lower || "unable to resolve" in lower -> "Can't find the server. Check the address and your internet."
       "refused" in lower -> "The server refused the connection. Check the address and port."
       "timeout" in lower || "timed out" in lower -> "The server didn't answer in time."
       "endpoint malformed" in lower -> "The server address isn't valid."
       "certificate" in lower || "ssl" in lower || "tls" in lower -> "Secure connection failed. Check that the address uses rtmps://."
       "broken pipe" in lower || "reset" in lower -> "The connection dropped."
-      reason.isBlank() -> "Connection failed."
-      else -> reason
+      else -> null
     }
   }
 }

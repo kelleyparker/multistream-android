@@ -35,10 +35,18 @@ data class Destination(
     }
 }
 
-/** Joins a server URL and stream key with exactly one slash, ignoring stray whitespace. */
+/**
+ * Joins a server URL and stream key with exactly one slash, ignoring stray whitespace.
+ *
+ * Kick (AWS IVS) shows its server as a bare host, e.g. rtmps://abc.global-contribute.live-video.net.
+ * RootEncoder takes the first path segment as the RTMP app, so host + key would publish the key as
+ * the app with an empty stream name, and IVS hangs up ("End of stream"). IVS's app is "app", so add it.
+ */
 fun buildEndpoint(serverUrl: String, streamKey: String): String {
-  val server = serverUrl.trim().trimEnd('/')
+  var server = serverUrl.trim().trimEnd('/')
   val key = streamKey.trim().trimStart('/')
+  val isIvs = hostPortOf(server)?.host?.lowercase()?.endsWith(".live-video.net") == true
+  if (isIvs && key.isNotEmpty() && !server.substringAfter("://").contains('/')) server += "/app"
   return if (key.isEmpty()) server else "$server/$key"
 }
 

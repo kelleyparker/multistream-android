@@ -1,6 +1,7 @@
 package com.kelleyparker.multistream.core
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,5 +46,19 @@ class StatusReducerTest {
   fun `auth errors explain the stream key`() {
     val s = StatusReducer.reduce(emptyMap(), "yt", ConnectionEvent.AuthFailed)
     assertTrue((s["yt"] as DestinationStatus.Failed).reason.contains("stream key"))
+  }
+
+  @Test
+  fun `a server hang-up during publish gets plain words`() {
+    val s = StatusReducer.reduce(emptyMap(), "kk", ConnectionEvent.Lost("Error configure stream, End of stream", willRetry = true))
+    val status = s["kk"] as DestinationStatus.Reconnecting
+    assertEquals("The server closed the connection. Check the stream key and server URL.", status.reason)
+    assertNull(status.detail)
+  }
+
+  @Test
+  fun `unrecognised errors keep the raw text as a detail`() {
+    val s = StatusReducer.reduce(emptyMap(), "kk", ConnectionEvent.Lost("onStatus: NetStream.Publish.BadName", willRetry = false))
+    assertEquals(DestinationStatus.Failed("Connection failed.", "onStatus: NetStream.Publish.BadName"), s["kk"])
   }
 }

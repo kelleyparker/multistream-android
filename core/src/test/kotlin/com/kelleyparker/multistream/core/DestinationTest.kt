@@ -6,6 +6,15 @@ import org.junit.Test
 
 class DestinationTest {
   @Test
+  fun `kick's bare ivs host gets the app segment`() {
+    val host = "rtmps://fa723fc1b171.global-contribute.live-video.net"
+    assertEquals("$host/app/sk_us-west-2_x", buildEndpoint(host, "sk_us-west-2_x"))
+    assertEquals("$host:443/app/sk_us-west-2_x", buildEndpoint("$host:443/", "sk_us-west-2_x"))
+    assertEquals("$host:443/app/sk_us-west-2_x", buildEndpoint("$host:443/app/", "sk_us-west-2_x"))
+    assertEquals("rtmp://host:1935/sk_x", buildEndpoint("rtmp://host:1935", "sk_x"))
+  }
+
+  @Test
   fun `endpoint joins server and key with one slash`() {
     assertEquals("rtmp://live.twitch.tv/app/live_1", buildEndpoint("rtmp://live.twitch.tv/app/", "/live_1"))
     assertEquals("rtmp://live.twitch.tv/app/live_1", buildEndpoint(" rtmp://live.twitch.tv/app ", " live_1 "))
